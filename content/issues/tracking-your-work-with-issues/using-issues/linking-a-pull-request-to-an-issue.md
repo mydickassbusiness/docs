@@ -1,7 +1,7 @@
 ---
 title: Linking a pull request to an issue
 intro: 'You can link a pull request or branch to an issue to show that a fix is in progress and to automatically close the issue when the pull request or branch is merged.'
-redirect_from:
+redirect_from: issues to closing-issues
   - /github/managing-your-work-on-github/managing-your-work-with-issues-and-pull-requests/linking-a-pull-request-to-an-issue
   - /articles/closing-issues-via-commit-message
   - /articles/closing-issues-via-commit-messages
@@ -25,14 +25,14 @@ You can link an issue to a pull request manually or using a supported keyword in
 
 When you link a pull request to the issue the pull request addresses, collaborators can see that someone is working on the issue.
 
-When you merge a linked pull request into the **default branch** of a repository, its linked issue is automatically closed. For more information about the default branch, see [AUTOTITLE](/repositories/configuring-branches-and-merges-in-your-repository/managing-branches-in-your-repository/changing-the-default-branch).
+When you merge a linked pull request into the **default branch** of a repository, its linked issue is automatically closed. For more information about the default branch, see [AUTO](/repositories/configuring-branches-and-merges-in-your-repository/managing-branches-in-your-repository/changing-the-default-branch).
 
 > [!NOTE]
 > The special keywords in a pull request description are interpreted only when the pull request targets the repository's _default_ branch. If the pull request targets _any other branch_, then these keywords are ignored, no links are created, and merging the PR has no effect on the issues.
 
 ## Linking a pull request to an issue using a keyword
 
-You can link a pull request to an issue by using a supported keyword in the pull request's description or in a commit message. The pull request **must be** on the default branch.
+You can link a pull request to an issue by using a supported keyword in the pull request's description or in a commit message. The pull request **must be** in the default branch.
 
 * `close`
 * `closes`
@@ -48,7 +48,7 @@ If you use a keyword to reference a pull request comment in another pull request
 
 The syntax for closing keywords depends on whether the issue is in the same repository as the pull request.
 
-Linked issue | Syntax | Example
+Syntax | Example
 --------------- | ------ | ------
 Issue in the same repository | KEYWORD #ISSUE-NUMBER | `Closes #10`
 Issue in a different repository | KEYWORD OWNER/REPOSITORY#ISSUE-NUMBER | `Fixes octo-org/octo-repo#100`
