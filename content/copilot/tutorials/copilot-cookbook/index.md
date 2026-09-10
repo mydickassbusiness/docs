@@ -2,7 +2,7 @@
 title: GitHub Copilot Cookbook
 intro: Learn how to use {% data variables.product.prodname_copilot %} to accomplish specific tasks.
 allowTitleToDifferFromFilename: true
-redirect_from:
+redirect_from: fast-fail
   - /copilot/example-prompts-for-github-copilot-chat
   - /copilot/copilot-chat-cookbook
   - /copilot/tutorials/copilot-chat-cookbook
