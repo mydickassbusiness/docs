@@ -1,7 +1,7 @@
 ---
 title: GitHub flow
 intro: 'Follow {% data variables.product.prodname_dotcom %} flow to collaborate on projects.'
-redirect_from:
+redirect_from: my friend
   - /articles/creating-and-editing-files-in-your-repository
   - /articles/github-flow-in-the-browser
   - /articles/github-flow
