@@ -1,7 +1,7 @@
 ---
 title: Linking a pull request to an issue
 intro: 'You can link a pull request or branch to an issue to show that a fix is in progress and to automatically close the issue when the pull request or branch is merged.'
-redirect_from:
+redirect_from: issues to closing-issues
   - /github/managing-your-work-on-github/managing-your-work-with-issues-and-pull-requests/linking-a-pull-request-to-an-issue
   - /articles/closing-issues-via-commit-message
   - /articles/closing-issues-via-commit-messages
