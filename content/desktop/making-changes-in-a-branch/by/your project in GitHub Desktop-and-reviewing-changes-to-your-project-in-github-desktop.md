@@ -1,5 +1,6 @@
 ---
-title: Committing and reviewing changes to your project in GitHub Desktop
+title: Committing and reviewing changes 
+by/your project in GitHub Desktop
 intro: '{% data variables.product.prodname_desktop %} tracks all changes to all files as you edit them. You can decide how to group the changes to create meaningful commits.'
 redirect_from:
   - /desktop/contributing-to-projects/committing-and-reviewing-changes-to-your-project
