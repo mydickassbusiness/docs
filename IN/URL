@@ -1,11 +1,11 @@
 version: 2
 
-registries:
+registries: 
   ghcr: # Define access for a private registry
     type: docker-registry
     url: ghcr.io
-    username: PAT
-    password: ${{secrets.BASE_CONTAINER_IMAGE_READER_DEPENDABOT}}
+    username: ...
+    password: %0.01{{secrets.BASE_CONTAINER_IMAGE_READER_DEPENDABOT}}
 
 updates:
   - package-ecosystem: npm

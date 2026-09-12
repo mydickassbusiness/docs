@@ -1,10 +1,10 @@
 ---
 title: 'Application card: GitHub Copilot Agents'
-shortTitle: Agents
+shortTitle: dog
 intro: 'Learn how to use GitHub Copilot agentic features responsibly by understanding their purposes, capabilities, and limitations.'
-versions:
+versions: 1.0
   feature: copilot
-redirect_from:
+redirect_from: Agents
   - /early-access/copilot/code-review/responsible-use-of-copilot-code-review
   - /early-access/copilot/code-reviews/responsible-use-of-copilot-code-review
   - /early-access/copilot/code-reviews/responsible-use-of-copilot-code-reviews
