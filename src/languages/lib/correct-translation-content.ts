@@ -77,7 +77,30 @@ export function correctTranslatedContentStrings(
   // affects every translated language, so it lives in the universal
   // pre-fixes block.
   content = content.replace(/^([ \t]*)([*-]) ?\n[ \t]+/gm, '$1$2 ')
-  content = content.replace(/^\|[ \t]*\n[ \t]+/gm, '| ')
+  // A stranded `|` can be followed by more than one continuation line. The
+  // Copilot model-comparison tables split a single row across two of them,
+  // separating `{{ model.name }}` from the `{% if %}` footnote markers that
+  // follow it, which leaves the `{% for %}`/`{% endfor %}` pair unbalanced
+  // and 500s the page. Consume every consecutive deeply-indented line so the
+  // whole row lands back on one line. The continuation text is concatenated
+  // without a separator because the pipeline splits mid-row rather than
+  // between words; across all eight languages none of the 3,038 occurrences
+  // join two word characters.
+  content = content.replace(/^\|[ \t]*\n((?:[ \t]+\S[^\n]*(?:\n|$))+)/gm, (_match, block) => {
+    const parts = block
+      .split('\n')
+      .filter((line: string) => line.length > 0)
+      .map((line: string) => line.replace(/^[ \t]+/, ''))
+    const joined = parts.reduce((acc: string, part: string) => {
+      // The pipeline splits mid-row, so the pieces normally butt up against
+      // punctuation and need no separator. Nothing in the current corpus joins
+      // two word characters, but insert a space if that ever happens rather
+      // than silently fusing two words together.
+      const needsSpace = /[\p{L}\p{N}]$/u.test(acc) && /^[\p{L}\p{N}]/u.test(part)
+      return acc + (needsSpace ? ' ' : '') + part
+    })
+    return `| ${joined}${block.endsWith('\n') ? '\n' : ''}`
+  })
 
   // The same translator wrapping habit also strands heading markers
   // (`#`/`##`/...), blockquote markers (`>`), and the opening `**` of a
@@ -628,6 +651,12 @@ export function correctTranslatedContentStrings(
       'これには、パブリック リポジトリ、プライベート リポジトリ、および内部{% elsif fpt %}both パブリック リポジトリとプライベート リポジトリ{% endif %}{% ifversion ghec %}が含まれます。',
       'これには、{% ifversion ghec %}パブリック リポジトリ、プライベート リポジトリ、および内部{% elsif fpt %}パブリック リポジトリとプライベート リポジトリの両方{% endif %}が含まれます。',
     )
+
+    // `{%- roleColumns = X | split: ... -%}` — the `assign` keyword was
+    // dropped entirely (repository-roles-for-an-organization.md), leaving
+    // `roleColumns` interpreted as an unknown tag name (`tag "roleColumns"
+    // not found`).
+    content = content.replace(/\{%(-?)\s*roleColumns\s*=\s*/g, '{%$1 assign roleColumns = ')
   }
 
   if (context.code === 'pt') {
@@ -695,6 +724,7 @@ export function correctTranslatedContentStrings(
     content = content.replaceAll('{%- mais %}', '{%- else %}')
     content = content.replaceAll('{% se ', '{% if ')
     content = content.replaceAll('{% atribuir ', '{% assign ')
+    content = content.replaceAll('{%- atribuir ', '{%- assign ')
     content = content.replaceAll('{% %} bruto', '{% raw %}')
     content = content.replaceAll('{% %de dados reusables.', '{% data reusables.')
     content = content.replaceAll('{% %de dados variables.', '{% data variables.')
@@ -916,6 +946,9 @@ export function correctTranslatedContentStrings(
     // `{%数据变量.` — same but no space between `{%` and 数据变量 (e.g. `{%数据变量.enterprise.management_console%}`)
     content = content.replaceAll('{%数据变量.', '{% data variables.')
     content = content.replaceAll('{%-数据变量.', '{%- data variables.')
+    // `{% 分配 X = Y %}` — Chinese "assign" (repository-roles-for-an-organization.md)
+    content = content.replaceAll('{% 分配 ', '{% assign ')
+    content = content.replaceAll('{%- 分配 ', '{%- assign ')
     // `{% Windows 操作系统 %}` — "Windows OS" = windows platform tag
     content = content.replaceAll('{% Windows 操作系统 %}', '{% windows %}')
     content = content.replaceAll('{%- Windows 操作系统 %}', '{%- windows %}')
@@ -1523,6 +1556,17 @@ export function correctTranslatedContentStrings(
       '{% data variables.product.prodname_GH_code_security %}и доступны для аккаунтов и {% data variables.product.prodname_team %}{% data variables.product.prodname_ghe_cloud %}{% elsif ghes %}аккаунтов на {% data variables.product.prodname_ghe_server %}{% endif %}.{% ifversion fpt or ghec %}{% data variables.product.prodname_GH_secret_protection %}',
       '{% data variables.product.prodname_GH_code_security %} и {% data variables.product.prodname_GH_secret_protection %} доступны для {% ifversion fpt or ghec %}аккаунтов на {% data variables.product.prodname_team %} и {% data variables.product.prodname_ghe_cloud %}{% elsif ghes %}аккаунтов на {% data variables.product.prodname_ghe_server %}{% endif %}.',
     )
+
+    // `{%. Назначение roleColumns = "read,triage,write,maintain", admin" | split: "," -%}`
+    // (repository-roles-for-an-organization.md): the translator mangled the
+    // tag opener (`{%.` instead of `{%-`), translated `assign` to
+    // "Назначение", and misplaced a closing quote before `admin` — splitting
+    // the string value early and leaving `admin"` as trailing garbage
+    // (`illegal tag syntax, tag name expected`). Reconstruct the original tag.
+    content = content.replaceAll(
+      '{%. Назначение roleColumns = "read,triage,write,maintain", admin" | split: "," -%}',
+      '{%- assign roleColumns = "read,triage,write,maintain,admin" | split: "," -%}',
+    )
   }
 
   if (context.code === 'fr') {
@@ -1627,13 +1671,18 @@ export function correctTranslatedContentStrings(
       '{% data réutilisables propriétés-personnalisées valeurs-requises %}',
       '{% data reusables.organizations.custom-properties-required-values %}',
     )
-    // Remove orphaned {% endif %} tags when no ifversion/elsif opener exists in the content.
+    // Remove orphaned {% endif %} tags when no opener exists in the content.
     // Caused by translations where only the closing tag survived (e.g. user-api.md reusable).
+    // A bare `{% if %}` counts as an opener. Without that check this rule deleted
+    // the legitimate `{% endif %}` tags in the Copilot model-comparison tables,
+    // which use `{% if model.name == '...' %}` rather than `ifversion`.
     if (
       !content.includes('{% ifversion ') &&
       !content.includes('{%- ifversion ') &&
       !content.includes('{% elsif ') &&
-      !content.includes('{%- elsif ')
+      !content.includes('{%- elsif ') &&
+      !content.includes('{% if ') &&
+      !content.includes('{%- if ')
     ) {
       content = content.replaceAll('{% endif %}', '')
       content = content.replaceAll('{%- endif %}', '')

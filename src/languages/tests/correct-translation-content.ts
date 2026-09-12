@@ -2073,6 +2073,47 @@ describe('correctTranslatedContentStrings', () => {
       expect(fix('| a | b |\n| c | d |', 'es')).toBe('| a | b |\n| c | d |')
     })
 
+    test('rejoins table cells split across several continuation lines', () => {
+      // The Copilot model-comparison tables split one row across two indented
+      // lines, separating `{{ model.name }}` from the `{% if %}` footnote
+      // markers. Joining only the first line left the row broken and unbalanced
+      // the surrounding `{% for %}`/`{% endfor %}` pair, which 500s the page.
+      const broken =
+        '|\n              {{ model.name }}\n' +
+        "              {% if model.name == 'X' %}[^x]{% endif %} | {% if model.pro %}yes{% endif %} |"
+      const expected =
+        "| {{ model.name }}{% if model.name == 'X' %}[^x]{% endif %} | {% if model.pro %}yes{% endif %} |"
+      for (const lang of ['ja', 'de', 'es', 'fr', 'ko', 'pt', 'ru', 'zh']) {
+        expect(fix(broken, lang)).toBe(expected)
+      }
+
+      // Three or more continuation lines collapse just the same.
+      expect(fix('|\n      one |\n      two |\n      three |', 'fr')).toBe('| one |two |three |')
+
+      // A single continuation line still behaves exactly as before.
+      expect(fix('|\n              cell text', 'fr')).toBe('| cell text')
+
+      // Unlike the heading/blockquote rejoin, the pipe rule has never required a
+      // deep indent, so a shallow continuation line still joins.
+      expect(fix('|\n  cell text', 'fr')).toBe('| cell text')
+
+      // Consecutive stranded pipes stay separate rows.
+      expect(fix('|\n      one\n|\n      two', 'fr')).toBe('| one\n| two')
+
+      // Pieces that would otherwise fuse two words get a separating space.
+      expect(fix('|\n      cell one\n      cell two', 'fr')).toBe('| cell one cell two')
+    })
+
+    test('keeps legitimate endif tags when the opener is a bare if (fr)', () => {
+      // The orphan-endif rule only recognised `ifversion`/`elsif` openers, so it
+      // deleted the closing tags in content that opens with a bare `{% if %}`.
+      const content = "{% if model.name == 'X' %}[^x]{% endif %}"
+      expect(fix(content, 'fr')).toBe(content)
+
+      // A genuinely orphaned endif, with no opener of any kind, is still removed.
+      expect(fix('Some text {% endif %}', 'fr')).toBe('Some text ')
+    })
+
     test('rejoins dangling heading markers (all languages)', () => {
       const broken = '### \n              {% data variables.product.github %} の使用'
       const expected = '### {% data variables.product.github %} の使用'
@@ -3034,6 +3075,41 @@ Para más información, consulta "[AUTOTITLE](/path)".
     test('renders the ghes branch on ghes', async () => {
       const output = await render(fix(broken, 'ru'), ghesVersion)
       expect(output).toContain('GitHub нижнего колонтитула, для всех пользователей')
+    })
+  })
+
+  describe('ja: repository-roles-for-an-organization.md missing assign keyword', () => {
+    test('restores the dropped `assign` keyword before roleColumns', () => {
+      const broken = '{%- roleColumns = "read,triage,write,maintain,admin" | split: "," -%}'
+      const fixed = '{%- assign roleColumns = "read,triage,write,maintain,admin" | split: "," -%}'
+      expect(fix(broken, 'ja')).toBe(fixed)
+      expect(fix(fixed, 'ja')).toBe(fixed)
+    })
+  })
+
+  describe('pt: repository-roles-for-an-organization.md translated assign keyword', () => {
+    test('translates `atribuir` (assign) back to `assign`, with and without a trim dash', () => {
+      expect(fix('{% atribuir roleColumns = X %}', 'pt')).toBe('{% assign roleColumns = X %}')
+      expect(fix('{%- atribuir roleColumns = X -%}', 'pt')).toBe('{%- assign roleColumns = X -%}')
+      expect(fix('{% assign roleColumns = X %}', 'pt')).toBe('{% assign roleColumns = X %}')
+    })
+  })
+
+  describe('zh: repository-roles-for-an-organization.md translated assign keyword', () => {
+    test('translates `分配` (assign) back to `assign`, with and without a trim dash', () => {
+      expect(fix('{% 分配 roleColumns = X %}', 'zh')).toBe('{% assign roleColumns = X %}')
+      expect(fix('{%- 分配 roleColumns = X -%}', 'zh')).toBe('{%- assign roleColumns = X -%}')
+      expect(fix('{% assign roleColumns = X %}', 'zh')).toBe('{% assign roleColumns = X %}')
+    })
+  })
+
+  describe('ru: repository-roles-for-an-organization.md per-file fix', () => {
+    test('reconstructs the mangled tag opener, translated `assign` keyword, and misplaced quote', () => {
+      const broken =
+        '{%. Назначение roleColumns = "read,triage,write,maintain", admin" | split: "," -%}'
+      const fixed = '{%- assign roleColumns = "read,triage,write,maintain,admin" | split: "," -%}'
+      expect(fix(broken, 'ru')).toBe(fixed)
+      expect(fix(fixed, 'ru')).toBe(fixed)
     })
   })
 
